@@ -1,0 +1,566 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <title>Open House Admin</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="/resources/demos/style.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script type="text/javascript" src="tinymce/tinymce.min.js"></script>
+    <style>
+        #sortable {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            width: 850px;
+        }
+
+            #sortable li {
+                margin: 3px 3px 3px 0;
+                padding: 1px;
+                float: left;
+                height: 100px;
+                font-size: 4em;
+                text-align: center;
+            }
+    </style>
+    <script>
+        var ordered_imgs;
+        var admin;
+        var Folder;
+        var Folders;
+        var reg;
+        var saveButton;
+        $(function () {
+            $( "#sortable" ).sortable();
+            $( "#sortable" ).disableSelection();
+        });
+        $(document).ready(function () {
+            //var a = "{\"laptops\": [ {\"a\":\"ibm\",\"b\":\"bb\"}, {\"a\":\"lenova\",\"b\":\"wm\"}, {\"a\":\"dell\",\"b\":\"bb\"} ] }";
+            //var c = JSON.parse(a);
+            //var d = c.filter(function (i, e) { return e.b == 'bb'; } );
+            //alert(d.laptops.length);
+            $("#checkmark").hide();
+            $('#logoUploader').submit(function (e) {
+                e.preventDefault();
+                //alert("blocked");
+                var data = new FormData(this);
+                $.ajax({
+                    url: 'uploadLogo.php',
+                    type: 'POST',
+                    data: data,
+                    cache: false,
+                    processData: false,
+                    contentType: false,
+                    success: function (data) {
+                        var res = JSON.parse(data);
+                        var msg = "";
+                        if (res.status == "failure") {
+                            for (var i = 0; i < res.messages.length; i++) {
+                                msg += res.messages[i].message + "\n";
+                            }
+                            alert(msg);
+                        }
+                        else {
+                            admin.branding.logo = res.newfile;
+                            saveJSON();
+                            $("#companyLogo").html("<img src=\"" + admin.branding.logo + "\" />");
+                            logoUploader.reset();
+                        }
+                    }
+                }).fail(function () {
+                    alert("AJAX Call to upload page failed.");
+                });
+            });
+            tinyMCE.init({
+                //version 4.0.5
+                selector: "textarea",
+                theme: "modern",
+                plugins: [
+                                    "advlist autolink lists link image charmap print preview hr anchor pagebreak",
+                                    "searchreplace wordcount visualblocks visualchars code fullscreen",
+                                    "insertdatetime media nonbreaking save table contextmenu directionality",
+                                    "emoticons template paste textcolor "
+                ],
+                toolbar1: "insertfile undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image",
+                toolbar2: "print preview media | forecolor backcolor emoticons",
+                image_advtab: true,
+                templates: [
+                                    { title: 'Test template 1', content: 'Test 1' },
+                                    { title: 'Test template 2', content: 'Test 2' }
+                ]
+            });
+            loadAdmin();
+            $('#confirm-delete').on('show.bs.modal', function (e) {
+                $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+            });
+        });
+        function getFolders() {
+            html = "<table style=\"width:100%\" class=\"table table-striped\" border='0' cellpadding=0 cellspacing=0>" +
+                "<thead><tr><th><b>Existing Folders</b></th>";
+            html += "<th><b>Name</b></th><th style=\"text-align:center;width:150px\"><b>Active</b></th>";
+            html += "<th style=\"text-align:center;width:200px\"><b>Action</b></th><th style=\"width:40px\"></th></tr></thead>";
+            for (var j = 0; j < admin.properties.length; j++) {
+                html += "<tr><td>" + admin.properties[j].folder + "</td><td>";
+                html += "<input folder=\"" + admin.properties[j].folder +
+                    "\" class=\"form-control\" type=\"text\" onchange=\"propChange('" + j +
+                    "');\" value=\"" + admin.properties[j].name + "\">";
+                html += "</td><td align='center'><div iType='active'>";
+                if (admin.properties[j].folder == admin.active)
+                    html += "<img src='../images/checkmark.jpg' height='15px' />";
+                else
+                    html += "<button class=\"btn btn-primary\" onclick=\"setActive('" + j + "');\">Set active</button>";
+                html += "</div></td><td align='center'>";
+                html += "<button class=\"btn btn-default\" prop=\"" + j + "\" onclick=\"doSave('" + j + "');\">Save</button>";
+                html += "&nbsp;<button class=\"btn btn-default\" onclick=\"doDelete('" + j + "');\" >" +  "Delete</button>";
+                html += "</td><td><span id=\"check\" folder=\"" + j +
+                    "\" hidden><img src='../images/checkmark.jpg' height='15px' /></span>";
+                html += "</td></tr>";
+            }
+            $("#folders").html(html);
+            loadImages();
+            loadRegistrationsJSON();
+            loadBranding();
+        }
+        function propChange(i){
+            $("button[prop=" + i + "]").removeClass("btn-default");
+            $("button[prop=" + i + "]").addClass("btn-primary");
+        }
+        function doDelete(j) {
+            reset = false;
+            if (admin.properties[j].folder == admin.active) {
+                reset = true;
+            }
+            admin.properties.splice(j, 1);
+            admin.images.splice(j, 1);
+            if (reset == true) {
+                if (admin.properties.length == 0) {
+                    admin.active = "";
+                }
+                else {
+                    admin.active = admin.properties[0].folder
+                }
+            }
+
+            $("#title").html("<h3>Current active property folder: " + admin.active + "</h3>");
+            saveJSON();
+            getFolders();
+        }
+        function doSave(j) {
+            //save all Folders no matter which save button is presses
+            for (var i = 0; i < admin.properties.length; i++) {
+                admin.properties[i].name = $("input[folder='" + admin.properties[i].folder + "']").val();
+            }
+            saveButton = j;
+            for (var j = 0; j < admin.properties.length; j++) {
+                $("button[prop=" + j + "]").removeClass("btn-primary");
+                $("button[prop=" + j + "]").addClass("btn-default");
+            }
+            saveJSON();
+        }
+        function claim(claimFolder) {
+            //this may be obsolete now that Folders are built through the UI
+
+            //consider removing
+
+            //identifies that a Folder was found on the file system, 
+            //but is not yet in our config table
+            //allows the new directory to be pulled into the config table so it can be used
+            $("button[Folder='" + j + "']").removeAttr("disabled");
+            $("input[Folder='" + j + "']").removeAttr("disabled");
+            $("button[Folder='" + j + "'][iType='claim']").attr("disabled", "disabled");
+            $("div[Folder='" + j + "'][iType='claim']").html("<img src='../images/checkmark.jpg' height='15px' />");
+            Folders[j].exists == "true";
+            admin.properties.push({ "name": "", "folder": Folders[j].folder });
+            //alert(JSON.stringify(admin.properties));
+            $.ajax({
+                url: "getFiles.php",
+                data: { folder: Folders[j].folder },
+                success: function (data) {
+                    //alert(data);
+                    files = eval("(" + data + ")");
+                    admin.images.push({ folder: Folders[j].folder, images: [] });
+                    for (var i = 0; i < files.files.length; i++)
+                    {
+                        admin.images[admin.images.length - 1].images.push({ src: files.files[i] });
+                    }
+                    $.ajax(
+                    {
+                        url: "../saveRegistrations.php",
+                        data: { folder: Folders[j].folder, json: "({ \"registered\": [] })" },
+                        success: function (data) {
+                            saveJSON();
+                        }
+                    }).fail(function () {
+                        alert("doSaveReg ajax call failed");
+                    });
+                }
+            }).fail(function () {
+                alert("claim ajax call failed");
+            });
+        }
+
+        function setActive(j) {
+            //marks a particular Folder as active.  this is the one that shows up in the main open house viewer
+            admin.active = admin.properties[j].folder;
+            $("#title").html("<h3>Current active property folder: " + admin.active + "</h3>");
+            saveJSON();
+            getFolders();
+        }
+
+        function loadAdmin() {
+            $.ajax({
+                url: "../readAdmin.php",
+                success: function (data) {
+                    admin = eval("(" + data + ")");
+                    for (var i = 0; i < admin.properties.length; i++) {
+                        if (admin.properties[i].folder == admin.active) {
+                            $("#title").html("<h3>Current active property folder: " + admin.properties[i].folder + "</h3>");
+                            Folder = admin.properties[i].folder;
+                        }
+                    }
+                    getFolders();
+                }
+            }).fail(function () {
+                alert("loadAdmin ajax call failed");
+            });
+        }
+        function loadImages() {
+            for (var i = 0; i < admin.images.length; i++) {
+                if (admin.images[i].folder == admin.active)
+                    ordered_imgs = admin.images[i].images;
+            }
+            $("#sortable").html("");
+            if (admin.images.length > 0) {
+                for (i = 0; i < ordered_imgs.length; i++) {
+                    $("#sortable").append("<li><img " +
+                        "width='150px' src='../data/" + admin.active + "/" + ordered_imgs[i].src +
+                        "' title='" + ordered_imgs[i].src + "'></li>");
+                }
+            }
+        }
+        function saveJSON() {
+            $.ajax(
+            {
+                type: "POST",
+                url: "saveAdmin.php",
+                data: { json: JSON.stringify(admin) },
+                success: function (data) {
+                    $("#checkmark").show().fadeOut(3000);
+                    $("#check[folder='" + saveButton + "']").show().fadeOut(3000);
+                }
+            }).fail(function () {
+                alert("saveJSON ajax call failed");
+            });
+        }
+        function calcOrder()
+        {
+            //return;
+            var str = "";
+            $("li").each(function () {
+                str += $(this).find("img").attr("src") + "\n";
+            });
+            $("#ta").text(str);
+        }
+        function loadRegistrationsJSON() {
+            $.ajax({
+                type: "GET",
+                url: "../readRegistrations.php",
+                data: { folder: admin.active },
+                success: function (data) {
+                    reg = eval("(" + data + ")");
+                    loadRegistrations();
+                }
+            }).fail(function () {
+                alert("loadRegistrationsJSON ajax call failed");
+            });
+        }
+        function regChange(i) {
+            $("button[regid=" + i + "]").removeClass("btn-default");
+            $("button[regid=" + i + "]").addClass("btn-primary");
+        }
+        function loadRegistrations() {
+            var items = [];
+            //alert(JSON.stringify(reg));
+            //alert("1");
+            for (i = 0; i < reg.registered.length; i++) {
+                //alert("2");
+                items.push("<tr>" +
+                        "<td><input id='regName' class='form-control' type='text' onchange='regChange(\"" + i +
+                            "\");' regid='" + i + "' value='" + reg.registered[i].name + "'></td>" +
+                        "<td><input id='regEmail' class='form-control' type='text' onchange='regChange(\"" + i +
+                            "\");' regid='" + i + "' value='" + reg.registered[i].email + "'></td>" +
+                        "<td><input id='regPhone' class='form-control' type='text' onchange='regChange(\"" + i +
+                            "\");' regid='" + i + "' value='" + reg.registered[i].phone + "'></td>" +
+                        "<td><input id='regNotes' class='form-control' type='text' onchange='regChange(\"" + i +
+                            "\");' regid='" + i + "' value='" + reg.registered[i].notes + "'></td>" +
+                        "<td style='text-align:center;width:80px;'><button class='btn btn-default' regid='" + i +
+                            "' onclick='doSaveReg(" + i + ");'>Save</button>" + "</td>" +
+                        "<td style='width:20px;'><img id='checkMark' regid='" + i + "' src='../images/checkmark.jpg' " +
+                            "height='15px' /></td>" +
+                    "</tr>");
+            }
+            //alert("3");
+            $("#registered_list").html("<table width=\"100%\" class='table table-striped'>" +
+                "<thead>" +
+                    "<tr>" +
+                        "<th>Name</th>" +
+                        "<th>E-Mail</th>" +
+                        "<th>Phone</th>" +
+                        "<th>Notes</th>" +
+                        "<th style='text-align:center;width:80px;'>" + "<b>Action</b></th>" +
+                        "<th style='width:40px;'></th>" +
+                    "</tr>" +
+                "</thead>" +
+                "<tbody>" +
+                    items.join("") +
+                "</tbody>" +
+                "</table>");
+            for (i = 0; i < reg.registered.length; i++)
+                $("#checkMark[regid='" + i + "']").hide();
+        }
+        function doSaveReg(j) {
+            for (var i = 0; i < reg.registered.length; i++) {
+                reg.registered[i].name = $("#regName[regid='" + i + "']").val();
+                reg.registered[i].email = $("#regEmail[regid='" + i + "']").val();
+                reg.registered[i].phone = $("#regPhone[regid='" + i + "']").val();
+                reg.registered[i].notes = $("#regNotes[regid='" + i + "']").val();
+            }
+            $.ajax(
+            {
+                url: "../saveRegistrations.php",
+                data: { folder: admin.active, json: JSON.stringify(reg) },
+                success: function (data) {
+                    for (i = 0; i < reg.registered.length; i++) {
+                        $("button[regid=" + i + "]").removeClass("btn-primary");
+                        $("button[regid=" + i + "]").addClass("btn-default");
+                    }
+                    $("#checkMark[regid='" + j + "']").show().fadeOut(3000);
+                }
+            }).fail(function () {
+                alert("doSaveReg ajax call failed");
+            });
+        }
+        function inputFolder() {
+            var html = "<div class='col-lg-6'><input type='text' class='form-control' id='newFolder' " + 
+                "placeholder='Enter new folder name' value=''></div>";
+            html += "<div class='col-lg-2'>";
+            html += "<button type='button' onclick='createFolder();' class='btn btn-primary'>Create</button>&nbsp;&nbsp;";
+            html += "<button type='button' onclick='cancelFolderInput();' class='btn btn-default'>Cancel</button>";
+            html += "</div>";
+            $("#divNewFolder").html(html);
+            $("#newFolder").focus();
+        }
+        function createFolder() {
+            if ($("#newFolder").val() > "") {
+                $.ajax(
+                {
+                    type: "POST",
+                    url: "saveFolder.php",
+                    data: { folder: $("#newFolder").val() },
+                    success: function (data) {
+                        admin.properties.push(
+                            {
+                                name: $("#newFolder").val(),
+                                folder: $("#newFolder").val()
+                            }
+                        );
+                        admin.active = $("#newFolder").val();
+                        $("#title").html("<h3>Current active property folder: " + admin.active + "</h3>");
+                        $.ajax(
+                        {
+                            type: "GET",
+                            url: "getFiles.php",
+                            data: { folder: admin.active },
+                            success: function (data) {
+                                files = eval("(" + data + ")");
+                                admin.images.push({ folder: admin.active, images: [] });
+                                for (var i = 0; i < files.files.length; i++)
+                                {
+                                    admin.images[admin.images.length - 1].images.push({ src: files.files[i] });
+                                }
+
+                                saveJSON();
+                                $("#divNewFolder").html("<button id='btnCreateFolder' class='btn btn-primary' onclick='inputFolder();'>Create New Folder</button>");
+                                getFolders();
+                            }
+                        }).fail(function () {
+                            alert("createFolder getFiles ajax call failed");
+                        });
+                    }
+                }).fail(function () {
+                    alert("createFolder saveFolder ajax call failed");
+                });
+            }
+            else {
+                $("#divNewFolder").html("<button id='btnCreateFolder' class='btn btn-primary' onclick='inputFolder();'>Create New Folder</button>");
+            }
+        }
+        function cancelFolderInput() {
+            $("#divNewFolder").html("<button id='btnCreateFolder' class='btn btn-primary' onclick='inputFolder();'>Create New Folder</button>");
+        }
+        function inputImage() {
+            window.open("UploadPicture.html");
+        }
+        function loadBranding() {
+            //alert(JSON.stringify(admin.branding));
+            $("#companyName").val(admin.branding.name);
+            $("#brandingMessage").val(admin.branding.message);
+            $("#brokerName").val(admin.branding.broker);
+            $("#companyLogo").html("<img src=\"" + admin.branding.logo + "\" />");
+            tinymce.activeEditor.setContent(admin.branding.message, { format: 'raw' });
+        }
+        function changeBranding(source) {
+            $("button[item=" + source + "]").removeClass("btn-default");
+            $("button[item=" + source + "]").addClass("btn-primary");
+        }
+        function saveBranding() {
+            admin.branding.name = $("#companyName").val();
+            admin.branding.message = tinymce.activeEditor.getContent();
+            admin.branding.broker = $("#brokerName").val();
+            $("button[item='name']").removeClass("btn-primary");
+            $("button[item='name']").addClass("btn-default");
+            saveJSON();
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <br />
+        <div id="brangingPanel" class="panel panel-default">
+            <div class="panel-heading">
+                <a data-toggle="collapse" data-parent="#accordion" href="#branding">
+                    <h4>Branding</h4>
+                </a>
+            </div>
+            <div id="branding" class="panel-body panel-collapse collapse">
+                <form id="logoUploader" method="post" enctype="multipart/form-data">
+                    <table border="0" width="100%">
+                        <tr style="height:40px">
+                            <th style="width:120px">Company name:</th>
+                            <td colspan="2" style="width:400px"><input id='companyName' onchange="changeBranding('name');" class='form-control' type='text' /></td>
+                            <td style="width:80px">
+                                <center>
+                                    <button class="btn btn-default" item="name" onclick="saveBranding();">Save</button>
+                                </center>
+                            </td>
+                        </tr>
+                        <tr style="height:40px">
+                            <th>Broker:</th>
+                            <td colspan="2"><input id='brokerName' class='form-control' onchange="changeBranding('name');" type='text' /></td>
+                            <td></td>
+                        </tr>
+                        <tr style="height:40px">
+                            <th>Message:</th>
+                            <td colspan="3">
+                                <textarea style="height:200px" rows="50" id='brandingMessage' class='form-control' onchange="changeBranding('name');"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Company logo:</th>
+                            <td><span id="companyLogo"></span></td>
+                            <td align="right">
+                                <input type="file" name="logoToUpload" id="logoToUpload">
+                            </td>
+                            <td>
+                                <input type="submit" class="btn btn-primary" value="Replace Image" name="submit">
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+        <div id="foldersPanel" class="panel panel-default">
+            <div class="panel-heading">
+                <a data-toggle="collapse" data-parent="#accordion" href="#showings">
+                    <h4>Available property folders</h4>
+                </a>
+            </div>
+            <div id="showings" class="panel-body panel-collapse collapse">
+                <div id="folders"></div>
+                <div id="divNewFolder">
+                    <button id="btnCreateFolder" class='btn btn-primary' onclick="inputFolder();">Create New Folder</button>
+                </div>
+            </div>
+        </div>
+        <div id="currentProperty" class="panel panel-default">
+            <div class="panel-heading">
+                <a data-toggle="collapse" data-parent="#accordion" href="#currentPropertyBody">
+                    <div id="title">
+                    </div>
+                </a>
+            </div>
+            <div id="currentPropertyBody" class="panel-body in collapse">
+                <div id="imagesPanel" class="panel panel-default">
+                    <div class="panel-heading">
+                        <a data-toggle="collapse" data-parent="#accordion" href="#images">
+                            <h4>Images</h4>
+                        </a>
+                    </div>
+                    <div id="images" class="panel-body in collapse">
+                        <table>
+                            <tr>
+                                <td>
+                                    <ul id='sortable'></ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div id="divNewImage">
+                                        <button class='btn btn-primary' id="btnUploadImage" onclick="inputImage();">Upload new picture</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div id="registrationPanel" class="panel panel-default">
+                    <div class="panel-heading">
+                        <a data-toggle="collapse" data-parent="#accordion" href="#registered">
+                            <h4>Registrations</h4>
+                        </a>
+                    </div>
+                    <div id="registered" class="panel-body panel-collapse collapse">
+                        <div id="registered_list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        Confirm Delete
+                    </div>
+                    <div class="modal-body">
+                        This will remove the folder from the screen, but will also <b>delete all associated files.</b>
+                        <br /><br />
+                        Please confirm.
+                    </div>
+                    <div class="modal-footer">
+                        <a class="btn btn-danger btn-ok">Confirm the Delete</a>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+<!--
+    The rivera’s (Eric? and Ella)
+weluvtigers@gmail
+972-399-6799
+Lease expiring in march…reach out to them then
+
+
+
+-->

@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <script src="displayCarousel.js"></script>
+    <style>
+        body {
+            font-size: 2em;
+        }
+        .carousel-fade {
+            .carousel-inner
+
+        {
+            .item
+
+        {
+            transition-property: opacity;
+        }
+
+        .item,
+        .active.left,
+        .active.right {
+            opacity: 0;
+        }
+
+        .active,
+        .next.left,
+        .prev.right {
+            opacity: 1;
+        }
+
+            .next,
+            .prev,
+            .active.left,
+            .active.right {
+                left: 0;
+                transform: translate3d(0, 0, 0);
+            }
+
+        }
+
+        .carousel-control {
+            z-index: 2;
+        }
+
+        }
+
+
+
+        html,
+        body,
+        .carousel,
+        .carousel-inner,
+        .carousel-inner .item {
+            height: 100%;
+        }
+
+        .item:nth-child(1) {
+            background: #74C390;
+        }
+
+        .item:nth-child(2) {
+            background: #51BCE8;
+        }
+
+        .item:nth-child(3) {
+            background: #E46653;
+        }
+    </style>
+    <script>
+        displayCarousel({
+            city: "Flower Mound", minPrice: "400000", maxPrice: "400000",
+            time: "2000", transitionStyle: "fade"
+        }, "example");
+    </script>
+</head>
+<body style="background-color:cornflowerblue;">
+    <br />
+    <div>
+        <div class="row">
+            <div class="col-lg-3"></div>
+            <div class="well col-lg-6">
+                <div class="" id="example">
+                </div>
+            </div>
+            <div class="col-lg-3"></div>
+        </div>
+    </div>
+    <textarea id="ta" rows="20" cols="80" style="visibility:hidden;"></textarea>
+</body>
+</html>

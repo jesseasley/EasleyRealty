@@ -1,0 +1,206 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <title>OHM Upload</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="/resources/demos/style.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <style>
+        #deleteImage{
+            vertical-align: top;
+            position: relative;
+            left: -25px;
+        }
+        #sortable {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            width: 850px;
+        }
+
+        #sortable li {
+            margin: 3px 3px 3px 0;
+            padding: 1px;
+            float: left;
+            height: 100px;
+            font-size: 4em;
+            text-align: center;
+        }
+    </style>
+<script>
+    uploadSuccess = false;
+    $(document).ready(function () {
+        loadAdmin();
+        $('#picUploader').submit(function (e) {
+            e.preventDefault();
+            //alert("blocked");
+            var data = new FormData(this);
+            $.ajax({
+                url: 'upload.php?current_folder=' + admin.active,
+                //url: 'upload.php',
+                type: 'POST',
+                data: data,
+                cache: false,
+                processData: false,
+                contentType: false,
+                success: function (data) {
+                    //alert(data);
+                    var res = JSON.parse(data);
+                    var msg = "";
+                    if (res.status == "failure") {
+                        for (var i = 0; i < res.messages.length; i++) {
+                            msg += res.messages[i].message + "\n";
+                        }
+                        $("#uploadStatus").html(msg.replace("\n", "<br>")).show().fadeOut(5000);
+                    }
+                    else {
+                        updateImages();
+                    }
+                }
+            }).fail(function () {
+                alert("AJAX Call to upload page failed.");
+            });
+        });
+    });
+    function closeWindow() {
+        window.close();
+    }
+    function loadAdmin() {
+        $.ajax({
+            url: "../readAdmin.php",
+            success: function (data) {
+                admin = eval("(" + data + ")");
+                for (var i = 0; i < admin.properties.length; i++) {
+                    if (admin.properties[i].folder == admin.active) {
+                        $("#title").html("<h3>Current active folder: " + admin.properties[i].folder + "</h3>");
+                        folder = admin.properties[i].folder;
+                    }
+                }
+                loadImages();
+            }
+        }).fail(function () {
+            alert("loadAdmin ajax call failed");
+        });
+    }
+    function updateImages() {
+        for (var i = 0; i < admin.images.length; i++) {
+            if (admin.images[i].folder == admin.active) {
+                admin.images[i].images.push({
+                    src: $("#fileToUpload").val().replace(/C:\\fakepath\\/i, ''),
+                    alt: $("#fileToUpload").val().replace(/C:\\fakepath\\/i, '')
+                });
+            }
+        }
+        saveJSON();
+        if (uploadSuccess == true) {
+            $("#uploadStatus").show().html("The file was uploaded<br /><br />" +
+                "<button class=\"btn btn-default\" onclick=\"location.reload();\">Upload Another</button>" +
+                "<button class=\"btn btn-default\" onclick=\"closeWindow();\">Back to the Admin Screen</button>");
+            loadImages();
+            uploadSuccess = false;
+        }
+    }
+    function saveJSON() {
+        $.ajax(
+        {
+            type: "POST",
+            url: "saveAdmin.php",
+            data: { json: JSON.stringify(admin) },
+            success: function (data) {
+                uploadSuccess = true;
+            }
+        }).fail(function () {
+            alert("saveJSON ajax call failed");
+        });
+    }
+    function loadImages() {
+        for (var i = 0; i < admin.images.length; i++) {
+            if (admin.images[i].folder == admin.active) {
+                html = "";
+                html += "<div>";
+                for (var j = 0; j < admin.images[i].images.length; j++) {
+                    html += "<img " +
+                    "height='100px' src='../data/" + folder + "/" + admin.images[i].images[j].src +
+                    "' title='" + admin.images[i].images[j].src + "'>" +
+                    "<a href=\"#\" onclick=\"removeImage('" +
+                    admin.images[i].folder + "','" + admin.images[i].images[j].src +
+                    "');\"><image title=\"Remove " + admin.images[i].images[j].src + " from list\" " +
+                    "id=\"deleteImage\" src=\"images/closeButton.jpg\">";
+                }
+                html += "</div>";
+                $("#sortable").html(html);
+            }
+        }
+    }
+    function removeImage(folder, image) {
+        for (var i = 0; i < admin.images.length; i++) {
+            for (var j = 0; j < admin.images[i].images.length; j++) {
+                if ((admin.images[i].folder == folder) && (admin.images[i].images[j].src == image)) {
+                    admin.images[i].images.splice(j, 1);
+                    j = admin.images[i].images.length;
+                    i = admin.images.length;
+                    saveJSON();
+                    loadImages();
+                }
+
+            }
+        }
+    }
+</script>
+</head>
+<body>
+    <div class="container">
+        <br />
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <div id="title"></div><br />
+            </div>
+            <div class="panel panel-body">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Select Image to Upload
+                    </div>
+                    <div class="row panel-body">
+                        <form id="picUploader" action="upload.php" method="post" enctype="multipart/form-data">
+                            <div class="col-lg-5">
+                                <input type="file" name="fileToUpload" id="fileToUpload">
+                            </div>
+                            <div class="col-lg-3">
+                                <input type="submit" class="btn btn-primary" value="Upload Image" name="submit">
+                                <input type="button" class="btn btn-default" value="Cancel" onclick="closeWindow();" name="cancel">
+                            </div>
+                        </form><br /><br />
+                        <div style="height:40px">
+                            <table>
+                                <tr>
+                                    <td style="width:10px"></td>
+                                    <td>
+                                        <div id="uploadStatus"></div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        Selected Images
+                    </div>
+                    <div class="row panel-body">
+                        <div class="col-lg-12">
+                            <div id='sortable'></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

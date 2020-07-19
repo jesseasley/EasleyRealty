@@ -1,0 +1,675 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+    <title>Easley Realty</title>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="http://malsup.github.com/jquery.cycle.all.js"></script>
+    <!--
+        <script type="text/javascript" src="http://code.jquery.com/mobile/1.0a4.1/jquery.mobile-1.0a4.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery-1.8.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery.mobile-1.0a4.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery.cycle.all.js"></script>
+    -->
+    <script type="text/javascript" src="js/properties.js"></script>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <meta name="robots" content="index,follow" />
+    <meta name="keywords" content="website, design, consulting, it, web design, technology, application, websites, applications, designs" />
+    <style>
+        .carousel-inner > .item > img,
+        .carousel-inner > .item > a > img {
+            width: 100%;
+            margin: auto;
+        }
+    </style>
+    <script type="text/javascript">
+        var d;
+        var s;
+        var panoramicMarkup = '<div id="panoramicSlideshow">' +
+            '<img src="images/1.jpg" width="100%">' +
+            '<img src="images/2.jpg" width="100%">' +
+            '<img src="images/3.jpg" width="100%">' +
+            '<img src="images/4.jpg" width="100%"></div>';
+        var propertyMarkup;
+
+        $(document).ready(function () {
+            $('#menu > li > ul').hide().click(function (e) { e.stopPropagation(); });
+            $('#menu > li').hover(function () {
+                $(this).find('ul').slideDown();
+            }, function () {
+                $(this).find('ul').slideUp();
+            });
+            readFile("static");
+            readFile("dynamic");
+
+            //startPanoramic();
+            if ((location.toString().indexOf("#Home") > 0) || (location.toString().indexOf("#") == -1)) {
+                //alert("prop here");
+                showHome();
+                getPropertyMarkup();
+            }
+            if (location.toString().indexOf("#Listings") > 0)
+                displayListings();
+            if (location.toString().indexOf("#Buyers") > 0)
+                openLink('Buyers');
+            if (location.toString().indexOf("#Sellers") > 0)
+                openLink('Sellers');
+            if (location.toString().indexOf("#Testimonials") > 0)
+                showPage("testimonials.php", "stub");
+            if (location.toString().indexOf("#Bio") > 0)
+                showPage("bio.php", "stub");
+            if (location.toString().indexOf("#Email") > 0)
+                showPage("email_html.php", "stub");
+        });
+
+        function startPanoramic() {
+            $('#panoramicSlideshow').cycle('stop').remove();
+            $('#panoramicShow').append(panoramicMarkup);
+            //$('#effect').html(fx);
+            $('#panoramicSlideshow').cycle({
+                fx: "turnUp",
+                timeout: 10000,
+                delay: -1000,
+                after: function (curr, next, opts) {
+                    //var msg = 'Slide ' + (opts.currSlide + 1) + ' of ' + opts.slideCount;
+                    //$('#caption').html(msg);
+                }
+            });
+        }
+        function sendMail() {
+            if (validateFields()) {
+                $.ajax({
+                    type: "POST",
+                    url: "email.php",
+                    data: "name=" + $("#nameText").val() +
+                            "&email=" + $("#emailText").val() +
+                            "&phone=" + $("#phoneText").val() +
+                            "&subject=" + $("#subjectText").val() +
+                            "&body=" + $("#bodyTextArea").val(),
+                    success: function (data) {
+                        show("thankspage");
+                        if (data == "success")
+                            $("#emailResults").html("Thanks for contacting us.<br /><br />Someone will respond to your request shortly.");
+                        else if (data == "error")
+                            $("#emailResults").html("Something went wrong and we were unable to send your mail.<br /><br />Please try again later.");
+                        else
+                            $("#emailResults").html(data);
+                    }
+                });
+            }
+        }
+        function search() {
+            var url = "http://www.immobel.com/JessEasley/searchResults.do" +
+                  "?la=EN&per=JessEasley&shcu=&mode=std&rpp=15&c_sort=li_sort_priced&c_mls=&c_itype=1&c_stype=&cu=USD&c_rooms=&minsurface=&maxsurface=" +
+                  "&c_surface_mu=1&minlsurface=&maxlsurface=&c_lsurface_mu=1&c_yrblt_lo=&c_yrblt_hi=" +
+                  "&c_location=" + $("#city").val() +
+                  "&minprice=" + $("#minPrice").val() +
+                  "&maxprice=" + $("#maxPrice").val() +
+                  "&minbedroom=" + $("#bedrooms").val() +
+                  "&minbathroom=" + $("#baths").val();
+            window.open(url);
+        }
+        function saveFile(type, oData) {
+            $.ajax(
+            {
+                type: "POST",
+                url: "saveJSON.php",
+                data: { fileType: type, json: JSON.stringify(oData) },
+                success: function (data) {
+                    ; // document.write(type + " save: " + data + "<br>");
+                }
+            });
+        }
+        function readFile(type) {
+            $.ajax(
+            {
+                type: "POST",
+                url: "readJSON.php",
+                async: false,
+                data: { fileType: type },
+                success: function (data) {
+                    if (type == "static") {
+                        s = eval("(" + data + ")");
+                        //displayAdviceArticles();
+                        //alert("Specializations: " + s.Specializations.length);
+                    }
+                    else {
+                        d = eval("(" + data + ")");
+                        //displayLogins();
+                        //document.write("Listings: " + d.Listings.length + "<br>");
+                    }
+                }
+            });
+        }
+        function displayAdviceArticles() {
+            var html = "";
+            html += "<nav><ul id='menu'>";
+            html += "<li><a href='#' onclick='$(\"#content\").html(\"\");'>Home</a></li>";
+            html += "<li><a href='#' onclick='showPage(\"searchProperty.php\", \"stub\");'>Home Search</a></li>";
+            html += "<li><a href='#' onclick='displayListings();'>Listings</a></li>";
+            html += "<li><a href='#' onclick='openLink(\"Articles\");'>Articles</a><ul>";
+            for (var i = 0; i < s.Subject.length; i++) {
+                html += "<li><a href='#' onclick='openLink(\"" + s.Subject[i].Name + "\");'><nobr>" + s.Subject[i].Name + "</nobr></a><ul>";
+                if ((s.Subject[i].Name != "Buyers") && (s.Subject[i].Name != "Buyers2")) {
+                    for (var j = 0; j < s.Subject[i].Articles.length; j++) {
+                        html += "<li><a href='#' onclick='showPage(\"" + s.Subject[i].Articles[j].Location;
+                        html += "\", \"stub\");'><nobr>" + s.Subject[i].Articles[j].Name + "</nobr></a></li>";
+                    }
+                }
+                html += "</ul></li>";
+            }
+            html += "</ul></li>";
+            html += "<li><a href='#' onclick='showPage(\"testimonials.php\",\"stub\");'>Testimonials</a></li>";
+            html += "<li><a href='#' onclick='showPage(\"bio.php\",\"stub\");'>About Us</a></li>";
+            html += "<li><a href='#' onclick='showPage(\"email_html.php\",\"stub\");'>Contact Us</a></li>";
+            html += "</ul></nav>";
+            $("#menu").html(html);
+        }
+        function openLink(articleLocation) {
+            //$("#menu ul ul").slideUp();
+            //$("#home").slideUp();
+            $("#Panoramic").hide(500);
+            if ((articleLocation == "Sellers") || (articleLocation == "Buyers")) {
+                for (var i = 0; i < s.Subject.length; i++) {
+                    if (s.Subject[i].Name == articleLocation) {
+                        var html = "<ul>";
+                        for (var j = 0; j < s.Subject[i].Articles.length; j++) {
+                            html += "<li><a href='#' onclick='showPage(\"" + s.Subject[i].Articles[j].Location + "\", \"\");'>" + s.Subject[i].Articles[j].Name + "</a></li>";
+                        }
+                        html = "<table cellspacing=0 cellpadding=5 border=1 width=100%><tr><td width=300 valign=top>" + html;
+                        html += "</ul></td><td valign=top><div id='articleText'>&nbsp;</div></td></tr></table><table><tr height=\"12px\"><td /></tr></table>";
+                        $("#home").slideUp("slow", function () {
+                            $("#content").slideUp("slow", function () {
+                                $("#content").html(html);
+                                $("#content").slideDown();
+                            });
+                        });
+                    }
+                }
+            }
+        }
+        function showPage(pageName, stub) {
+            if (pageName.substring(0, 7) == "http://") {
+                window.open(pageName);
+                //alert(pageName);
+            }
+            else {
+                $("#home").slideUp("slow", function () {
+                    $("#content").slideUp("slow", function () {
+                        if (stub == "stub") {
+                            var html = "<table cellspacing=0 cellpadding=5 border=0><tr>";
+                            html += "<td valign=top><div id='articleText'>&nbsp;</div></td></tr></table>";
+                            $("#content").html(html);
+                        }
+
+                        $.ajax(
+                        {
+                            type: "GET",
+                            url: pageName,
+                            success: function (data) {
+                                $("#Panoramic").hide(500);
+                                $("#articleText").html(data);
+                                $("#content").slideDown();
+                                if (pageName == "email_html.php")
+                                    $("#nameText").focus();
+                            }
+                        });
+                    });
+                });
+            }
+        }
+        function displayExpertAdvice() {
+            var html = "<center><table border='1' cellpadding='5' cellspacing='0'>";
+            html += "<thead><th>Expert Advice</th></thead><tbody>";
+            for (var i = 0; i < s.ExpertAdvice.length; i++) {
+                html += "<tr>";
+                html += "<td>" + s.ExpertAdvice[i].advice + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody></table></center>";
+            $("#listings").html(html);
+        }
+        function displayAreas() {
+            var html = "<center><table border='1' cellpadding='0' cellspacing='0'>";
+            html += "<thead><th>Areas</th></thead><tbody>";
+            for (var i = 0; i < s.Areas.length; i++) {
+                html += "<tr>";
+                html += "<td>" + s.Areas[i].area + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody></table></center>";
+            $("#listings").html(html);
+        }
+        function displaySpecializations() {
+            var html = "<center><table border='1' cellpadding='0' cellspacing='0'>";
+            html += "<thead><th>Specialization</th></thead><tbody>";
+            for (var i = 0; i < s.Specializations.length; i++) {
+                html += "<tr>";
+                html += "<td>" + s.Specializations[i].Specialization + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody></table></center>";
+            $("#listings").html(html);
+        }
+        function displayLogins() {
+            var html = "<center><table border='1' cellpadding='0' cellspacing='0' width='800px' >";
+            html += "<thead><th>Username</th><th>Password</th><th>Level</th><th>Calendar</th><th>GUID</th><th>Logged in</th><th>Enabled</th></thead><tbody>";
+            for (var i = 0; i < d.Logins.length; i++) {
+                html += "<tr>";
+                html += "<td>" + d.Logins[i].username + "</td>";
+                html += "<td>" + d.Logins[i].password + "</td>";
+                html += "<td>" + d.Logins[i].level + "</td>";
+                html += "<td>" + d.Logins[i].calendar + "</td>";
+                html += "<td>" + d.Logins[i].guid + "</td>";
+                html += "<td>" + d.Logins[i].loggedin + "</td>";
+                html += "<td>" + d.Logins[i].enabled + "</td>";
+                html += "</tr>";
+            }
+            html += "</tbody></table></center>";
+            $("#listings").html(html);
+        }
+        function displayListings() {
+            $("#Panoramic").hide(500);
+            var html = "";
+            for (var i = 0; i < d.Listings.length; i++) {
+                if (d.Listings[i].Active == "TRUE") {
+                    html += "<div class='well'>";
+                    html += "<center><image src='" + d.Listings[i].ImageLocation + "'>";
+                    html += "&nbsp;&nbsp;<a href='" + d.Listings[i].MapLink + "' target='_empty'><img border=0 src='images/map.gif'></a>";
+                    html += "<br><nobr>" + d.Listings[i].Address + "</nobr> in <nobr>" + d.Listings[i].City + "</nobr><br>";
+                    html += "</center><br><span class='smallheading'>";
+                    html += d.Listings[i].DescriptionCaption + "</span><br><span>" + d.Listings[i].Description + "</span>";
+                    //html += "<div class='well'>";
+                    //html += "<td align='left' valign='top'><image src='" + d.Listings[i].ImageLocation + "'></td>";
+                    //html += "<td align='center' valign='center' class='text'><nobr>" + d.Listings[i].Address + "</nobr><br><nobr>";
+                    //html += d.Listings[i].City + "</nobr><br>";
+                    //html += "<a href='" + d.Listings[i].MapLink + "' target='_empty'><img border=0 src='images/map.gif'></a></td>";
+                    //html += "<td align='left'><span class='smallheading'>";
+                    //html += d.Listings[i].DescriptionCaption + "</span><br><span class='text'>" + d.Listings[i].Description + "</span></td>";
+                    html += "</div>";
+                }
+            }
+            html += "";
+            $("#home").slideUp("slow", function () {
+                $("#content").slideUp("slow", function () {
+                    $("#content").html(html);
+                    $("#content").slideDown();
+                });
+            });
+        }
+        function submitListingSearch() {
+            var url = "http://www.ntreis.immobel.com/personal/1/searchResults.do?";
+            url += "la=EN&";                      //language
+            url += "per=JessEasley&";             //agent
+            url += "shcu=&";
+            url += "mode=std&";                   //standard mode
+            url += "rpp=15&";
+            url += "c_sort=li_sort_priced&";      //order option
+            url += "c_location=" + $("#selCity").val();    //city, state, country, zip
+            url += "&c_mls=&";                     //mls # - this is an either or with the address search
+            url += "c_itype=1&";                  //search type (1=residential for sale, 2=residential for lease, 3=commercial for sale, 4=commercial for lease, 5=land)
+            url += "c_stype=&";                   //residential type (1=single family home, 2=townhouse, 3=apartment/condo, 4=manufactured/mobile, 5=farm/ranch, 6=lots & land
+            url += "minprice=" + $("#selPriceMin").val();            //minimum price (comm & res)
+            url += "&maxprice=" + $("#selPriceMax").val();            //maximum price (comm & res)
+            url += "&cu=USD&";                     //cost units (US dollars)
+            url += "minbedroom=" + $("#selBeds").val();               // minimum bedrooms
+            url += "&c_rooms=&";                   //total rooms
+            url += "minbathroom=" + $("#selBaths").val();              //minimum baths
+            url += "&minsurface=" + $("#selSqFtMin").val();                //house sqft (comm & res)
+            url += "&maxsurface=" + $("#selSqFtMax").val();                //house sqft (comm & res)
+            url += "&c_surface_mu=1&";             //bldg size type (1=sqft, 2=m2)
+            url += "minlsurface=" + $("#selLotMin").val();               //lot size
+            url += "&maxlsurface=" + $("#selLotMax").val();               //lot size
+            url += "&c_lsurface_mu=3&";            //land size type (1=sqft, 2=m2, 3=acres, 4=hectares)
+            url += "c_yrblt_lo=&";                //year built
+            url += "c_yrblt_hi=&";                //year built
+            url += "c_price_freq=monthly";        //pricing frequency (monthly, annually) (comm only)
+            window.open(url);
+        }
+        function submitEmail() {
+            var valid = true;
+            if ($("#bodyTextArea").val().trim() == "") {
+                valid = false;
+                $("#bodyVal").html("<span style='color:red'>*</span>")
+                $("#bodyTextArea").focus();
+            }
+            else {
+                $("#bodyVal").html("")
+            }
+            if ($("#subjectText").val().trim() == "") {
+                valid = false;
+                $("#subjectVal").html("<span style='color:red'>*</span>")
+                $("#subjectText").focus();
+            }
+            else {
+                $("#subjectVal").html("")
+            }
+            if ($("#emailText").val().trim() == "") {
+                valid = false;
+                $("#emailVal").html("<span style='color:red'>*</span>")
+                $("#emailText").focus();
+            }
+            else {
+                $("#emailVal").html("")
+            }
+            if ($("#phoneText").val().trim() == "") {
+                valid = false;
+                $("#phoneVal").html("<span style='color:red'>*</span>")
+                $("#phoneText").focus();
+            }
+            else {
+                $("#phoneVal").html("")
+            }
+            if ($("#nameText").val().trim() == "") {
+                valid = false;
+                $("#nameVal").html("<span style='color:red'>*</span>")
+                $("#nameText").focus();
+            }
+            else {
+                $("#nameVal").html("")
+            }
+            if (valid == true) {
+                $.ajax(
+                {
+                    type: "POST",
+                    url: "email.php",
+                    data: {
+                        name: $("#nameText").val(),
+                        phone: $("#phoneText").val(),
+                        email: $("#emailText").val(),
+                        subject: $("#subjectText").val(),
+                        body: $("#bodyTextArea").val()
+                    },
+                    success: function (data) {
+                        $("#content").html(data);
+                    }
+                });
+            }
+        }
+        function startProperty() {
+            $('#propertySlideshow').cycle('stop').remove();
+            $('#propertyShow').html(propertyMarkup);
+            //alert(propertyMarkup);
+            //$('#effect').html(fx);
+            $('#propertySlideshow').cycle({
+                fx: "fade",
+                timeout: 5000,
+                delay: -1000,
+                after: function (curr, next, opts) {
+                    //var msg = 'Slide ' + (opts.currSlide + 1) + ' of ' + opts.slideCount;
+                    //$('#caption').html(msg);
+                }
+            });
+        }
+        function getPropertyMarkup() {
+            //alert("here1");
+          
+            $.ajax(
+            {
+                type: "POST",
+                url: "active_listings.php",
+                success: function (data) {
+                    //alert("here2");
+                    //propertyMarkup = html;
+                    //$("#ta1").val(html);
+                    //$("#ta2").val('<div id="propertySlideshow" style="border:0px">' + data + "</div>");
+                    //propertyMarkup = '<div id="propertySlideshow" style="border:0px;width:440px;height:290px;">' + data + "</div>";
+                    $('#propertyShow').html(data);
+                    $('.carousel').carousel({
+                        cycle: true
+                    });
+                    //startProperty();
+                    //$("#content").html(data);
+                }
+            });
+        }
+        function showHome() {
+            $("#Panoramic").show(500);
+            $("#content").slideUp("slow", function () {
+                $("#home").slideDown();
+            });
+            //startProperty();
+        }
+    </script>
+</head>
+
+<body topmargin="0" bottommargin="0" leftmargin="0" rightmargin="0">
+    <div class="container">
+        <div id="HeaderBar" class="row" style="background-image:url(images/title_gradient.jpg);">
+            <div class="col-lg-3 col-md-3 col=sm-3 hidden-xs"></div>
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <center>
+                    <img class="hidden-xs" src="images/title_icon.jpg" />
+                    <img class="hidden-sm hidden-md hidden-lg" src="images/title_icon_name.jpg" />
+                </center>
+            </div>
+            <div class="col-lg-3 col-md-3 col-sm-3 hidden-xs"></div>
+        </div>
+        <div id="Search" class="row" style="background-color:lightblue">
+            <center>
+                <div id="quickSearch" class="col-lg-12">
+                    City: <input type="text" id="city" placeholder="Search city" />
+                    <span class="hidden-xs">
+                        &nbsp;&nbsp;&nbsp;
+                        Price range: <input type="text" id="minPrice" placeholder="At least" /> to
+                        <input type="text" id="maxPrice" placeholder="At most" />&nbsp;&nbsp;&nbsp;
+                    </span>
+
+                    <span class="hidden-xs">Bedrooms:</span>
+                    <span class="hidden-sm hidden-md hidden-lg">Beds:</span>
+                    <select id="bedrooms">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4" selected=selected>4</option>
+                        <option value="5">5</option>
+                    </select>&nbsp;&nbsp;&nbsp;
+                    <span class="hidden-sm hidden-xs">
+                        Baths:
+                        <select id="baths">
+                            <option value="1">1</option>
+                            <option value="2" selected=selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>&nbsp;&nbsp;&nbsp;
+                    </span>
+                    <button id="btnSearch" onclick="search();">Search</button>
+                </div>
+                <span class="hidden-xs hidden-sm hidden-md">
+                    <br />
+                </span>
+                <hr />
+            </center>
+        </div>
+        <div id="Menus" class="row" style="background-color:lightblue">
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                <nav class="navbar navbar-default" role="navigation">
+                    <div class="container-fluid">
+                        <ul id="menu-main-navigation" class="nav navbar-nav">
+                            <li>
+                                <a href="#Home" onclick='showHome();'>Home</a>
+                            </li>
+                            <li>
+                                <a href="#Listings" onclick='displayListings();'>Premier Listings</a>
+                            </li>
+                            <li class="hidden-xs">
+                                <a href="#">Featured Articles</a>
+                                <ul>
+                                    <li>
+                                        <a href="#Buyers" onclick="openLink('Buyers');">Buyers</a>
+                                    </li>
+                                    <li>
+                                        <a href="#Sellers" onclick="openLink('Sellers');">Sellers</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="hidden-xs hidden-sm">
+                                <a href="#">Local Info</a>
+                                <ul>
+                                    <li>
+                                        <a href="#">Flower Mound</a>
+                                        <ul>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.flower-mound.com/', 'stub');">Official Web Site</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.bestplaces.net/city/texas/flower_mound', 'stub');">City Statistics</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://nces.ed.gov/surveys/libraries/librarysearch/library_list.asp?Search=1&Zip=75022&Miles=15', 'stub');">Public Libraries</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.greatschools.net/modperl/bycity/TX/?stateselect=TX&name=&market=&rating=&fuzzy=1&city=Flower%20Mound&schlname=&link=', 'stub');">Local Schools</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://capwiz.com/yo-demo/state/main/?state=TX&azip=75022&view=myofficials', 'stub');">Elected Officials</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="#">Lewisville</a>
+                                        <ul>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.cityoflewisville.com/', 'stub');">Official Web Site</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.bestplaces.net/city/texas/lewisville', 'stub');">City Statistics</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://nces.ed.gov/surveys/libraries/librarysearch/library_list.asp?Search=1&Zip=75029&Miles=15', 'stub');">Public Libraries</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.greatschools.net/modperl/bycity/TX/?stateselect=TX&name=&market=&rating=&fuzzy=1&city=Lewisville&schlname=&link=', 'stub');">Local Schools</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://capwiz.com/yo-demo/state/main/?state=TX&azip=75029&view=myofficials', 'stub');">Elected Officials</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="#">Highland Village</a>
+                                        <ul>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.highlandvillage.org/', 'stub');">Official Web Site</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.bestplaces.net/city/texas/highland_village', 'stub');">City Statistics</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://www.greatschools.net/modperl/bycity/TX/?stateselect=TX&name=&market=&rating=&fuzzy=1&city=Highland%20Village&schlname=&link=', 'stub');">Local Schools</a>
+                                            </li>
+                                            <li>
+                                                <a href="#" onclick="showPage('http://capwiz.com/yo-demo/state/main/?state=TX&azip=75067&view=myofficials', 'stub');">Elected Officials</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="hidden-xs">
+                                <a href="#">About Us</a>
+                                <ul>
+                                    <li>
+                                        <a href="#Testimonials" onclick='showPage("testimonials.php","stub");'>Testimonials</a>
+                                    </li>
+                                    <li>
+                                        <a href="#Bio" onclick='showPage("bio.php", "stub");'>Our Bio</a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <ul class="nav navbar-nav navbar-right">
+                            <li>
+                                <a href="#Email" onclick='showPage("email_html.php","stub");'>Contact Us</a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        <div id="Panoramic" class="row" style="background-color:lightblue">
+            <div id="myCarousel" class="carousel slide col-lg-12 col-md-12 col-sm-12 col-xs-12" data-ride="carousel" data-interval="15000">
+                <!-- Indicators -->
+                <ol class="carousel-indicators">
+                    <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+                    <li data-target="#myCarousel" data-slide-to="1"></li>
+                    <li data-target="#myCarousel" data-slide-to="2"></li>
+                    <li data-target="#myCarousel" data-slide-to="3"></li>
+                </ol>
+                <!-- Wrapper for slides -->
+                <div class="carousel-inner" role="listbox">
+                    <div class="item active">
+                        <img src="images/1.jpg" />
+                    </div>
+
+                    <div class="item">
+                        <img src="images/2.jpg" />
+                    </div>
+
+                    <div class="item">
+                        <img src="images/3.jpg" />
+                    </div>
+
+                    <div class="item">
+                        <img src="images/4.jpg" />
+                    </div>
+                </div>
+
+                <!-- Left and right controls-->
+                <a class="left carousel-control" href="#myCarousel" data-slide="prev">
+                    <span class="glyphicon glyphicon-chevron-left"></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="right carousel-control" href="#myCarousel" data-slide="next">
+                    <span class="glyphicon glyphicon-chevron-right"></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+        </div>
+        <div id="MainBody" class="row" style="background-color:lightblue">
+            <br />
+            <div class="col-lg-12">
+                <div id="listings"></div>
+                <div id="logins"></div>
+                <div id="content" style="text-align:left"></div>
+                <div id="home" class=" hidden-xs">
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <script type="text/javascript" src="http://www.mlcalc.com/widget-narrow.js"></script>
+                        </div>
+                        <div class="col-lg-5">
+                            <center>
+                                <div id="propertyShow">Loading properties...</div>
+                            </center>
+                            <br />
+                        </div>
+                        <div class="col-lg-3">
+                            <script type="text/javascript" src="http://www.mlcalc.com/mortgage-rates/widget-narrow.js"></script>
+                            </p>
+                            <facebook>
+                                <div id="fb-root"></div>
+                                <script src="http://connect.facebook.net/en_US/all.js#appId=261244953897287&amp;xfbml=1"></script>
+                                <fb:like href="http://www.easley-realty.com" layout="box_count" send="false" show_faces="false" font=""></fb:like>
+                            </facebook>
+                            <linked_in>
+                                <script type="text/javascript" src="http://platform.linkedin.com/in.js"></script>
+                                <script type="in/share" data-counter="right" data-url="http://www.easley-realty.com">
+                                </script>
+                            </linked_in>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

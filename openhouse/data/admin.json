@@ -1,0 +1,64 @@
+{
+    "branding": {
+        "name": "Easley Realty ",
+        "message": "<p><span class=\"sectionheading\"><strong>Our Personal Mission</strong>&nbsp;<br /></span><span class=\"text\">As your professional real estate advisor, we focus on client satisfaction. Our business is about service and we are not happy until you are happy. Our years in the business have provided us with the experience to assist you with nearly every real estate need. Whether it's finding a home, finding the best loan, or helping you get the most out of selling your home, we're here to guide you. If there is anything you need, please let us know.&nbsp;<br /><br /></span><span class=\"sectionheading\"><strong>About Our Services</strong>&nbsp;<br /></span><span class=\"text\">We will listen to your needs and help establish your goals. We will work as a team to meet those goals and we will make sure you stay in the loop during the entire process. In this fast paced market, we believe communication is key in meeting our goals and building our relationships.&nbsp;<br /><br />Please use our Website to access powerful features like access to the MLS, through the Property Search Wizard, to help you find the ideal home. Selling your home takes special care and attention in order to get the highest possible price and we can provide you with a comparable sales report to help determine the optimum price for your home. The Articles and Advice section is designed to provide important information on home buying, selling, and ownership. If you can't find what you are looking for, let us know and we will get you an answer or point you to a resource.&nbsp;<br /><br /></span><span class=\"sectionheading\"><strong>Satisfied clients are the key to our success&nbsp;</strong><br /></span><span class=\"text\">Our satisfied clients are our best resource for new business. In this very competitive business of real estate, service makes the difference. Our service is second to none and has earned us a valuable source of referrals. If you are considering a real estate professional, please give us an opportunity to earn your business too. We're confident you will be very happy!&nbsp;<br /><br /></span><span class=\"sectionheading\">Thank you.&nbsp;</span></p>",
+        "broker": "DFW Premier Properties",
+        "logo": "images/logo.gif"
+    },
+    "properties": [
+        {
+            "name": "1728 Marian Ln",
+            "folder": "1728 Marian Ln 2016-07-04"
+        },
+        {
+            "name": "1728 Marian Ln 2016-06-26",
+            "folder": "1728 Marian Ln 2016-06-26"
+        },
+        {
+            "name": "1728 Marian Ln 2016-07-23",
+            "folder": "1728 Marian Ln 2016-07-23"
+        }
+    ],
+    "images": [
+
+        {
+            "folder": "1728 Marian Ln 2016-07-04",
+            "images": [
+                { "src": "elevation.JPG" },
+                { "src": "kitchen.JPG" },
+                { "src": "kitchen.JPG" },
+                { "src": "kitchen.JPG" },
+                { "src": "kitchen.JPG" },
+                { "src": "ListingDistribution.jpg" },
+                { "src": "AskMe.jpg" }
+            ]
+        },
+        {
+            "folder": "1728 Marian Ln 2016-06-26",
+            "images": [
+                { "src": "back of house.jpg" },
+                { "src": "breakfast area and fireplace.JPG" },
+                { "src": "breakfast.jpg" },
+                { "src": "dining.JPG" },
+                { "src": "elevation.JPG" },
+                { "src": "family.JPG" },
+                { "src": "family2.JPG" },
+                { "src": "game.jpg" },
+                { "src": "kitchen.JPG" },
+                { "src": "living.jpg" },
+                { "src": "master bathroom shower.jpg" },
+                { "src": "master fireplace.jpg" },
+                { "src": "master1.JPG" },
+                { "src": "pool4.jpg" },
+                { "src": "pool5.jpg" }
+            ]
+        },
+        {
+            "folder": "1728 Marian Ln 2016-07-23",
+            "images": [
+                { "src": "elevation.JPG" } 
+            ]
+        }
+    ],
+    "active": "1728 Marian Ln 2016-07-04"
+}
