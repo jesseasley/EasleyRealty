@@ -4,7 +4,7 @@ Allow: /index.html
 Disallow: /advice
 Disallow: /archive
 Disallow: /css
-Disallow: /data
+Disallow: /data 
 Disallow: /images
 Disallow: /includes
 Disallow: /js
